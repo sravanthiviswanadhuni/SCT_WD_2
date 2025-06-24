@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calculator with Equation Display</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #ffafbd, #c9ffbf); /* pink to sky blue gradient */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', sans-serif;
+    color: #444;
+  }
+
+  .calculator {
+    background: rgba(255 255 255 / 0.85);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    width: 360px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .display {
+    background: #fdfdfd;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    padding: 12px 20px;
+    margin-bottom: 6px;
+    min-height: 36px;
+    text-align: right;
+    line-height: 1.4;
+    color: #888;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-all;
+    user-select: none;
+  }
+
+  .result {
+    background: #ededed;
+    border-radius: 12px;
+    font-size: 2.4rem;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    text-align: right;
+    font-weight: 600;
+    color: #333;
+    user-select: none;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 16px;
+  }
+
+  button {
+    background: #f9f9f9;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #333;
+    padding: 16px 0;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  button:hover {
+    background: #e2e2e2;
+  }
+
+  button.operator {
+    background: #ff758f;
+    color: white;
+  }
+
+  button.operator:hover {
+    background: #ff5678;
+  }
+
+  button.equal {
+    background: #6ec1e4;
+    color: white;
+    grid-column: span 2;
+  }
+
+  button.equal:hover {
+    background: #4aa8d6;
+  }
+
+  button.clear {
+    background: #f7a6b1;
+    color: white;
+  }
+
+  button.clear:hover {
+    background: #f28188;
+  }
+</style>
+</head>
+<body>
+  <div class="calculator" role="region" aria-label="Calculator with equation display">
+    <div id="equationDisplay" class="display" aria-live="polite" aria-atomic="true"></div>
+    <div id="resultDisplay" class="result" aria-live="polite" aria-atomic="true">0</div>
+    <div class="buttons">
+      <button class="clear" id="clear" aria-label="Clear">C</button>
+      <button class="operator" data-value="/" aria-label="Divide">÷</button>
+      <button class="operator" data-value="*" aria-label="Multiply">×</button>
+      <button class="operator" data-value="-" aria-label="Subtract">−</button>
+
+      <button data-value="7" aria-label="Seven">7</button>
+      <button data-value="8" aria-label="Eight">8</button>
+      <button data-value="9" aria-label="Nine">9</button>
+      <button class="operator" data-value="+" aria-label="Add">+</button>
+
+      <button data-value="4" aria-label="Four">4</button>
+      <button data-value="5" aria-label="Five">5</button>
+      <button data-value="6" aria-label="Six">6</button>
+      <button data-value="0" aria-label="Zero">0</button>
+
+      <button data-value="1" aria-label="One">1</button>
+      <button data-value="2" aria-label="Two">2</button>
+      <button data-value="3" aria-label="Three">3</button>
+      <button class="equal" id="equals" aria-label="Equals">=</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const equationDisplay = document.getElementById('equationDisplay');
+  const resultDisplay = document.getElementById('resultDisplay');
+  const clearButton = document.getElementById('clear');
+  const equalsButton = document.getElementById('equals');
+  const buttons = document.querySelectorAll('button[data-value]');
+  
+  let equation = '';
+  let resultShown = false;
+
+  function updateEquationDisplay() {
+    equationDisplay.textContent = equation || '0';
+  }
+
+  function updateResultDisplay(value) {
+    resultDisplay.textContent = value;
+  }
+
+  function isOperator(char) {
+    return ['+', '-', '*', '/'].includes(char);
+  }
+
+  function appendValue(value) {
+    if (resultShown && !isOperator(value)) {
+      // Starting new equation after result shown and input a number
+      equation = value;
+      resultShown = false;
+    } else {
+      // Prevent multiple operators in a row
+      if (isOperator(value)) {
+        if (equation === '' && value !== '-') {
+          // Do not start equation with operator except minus
+          return;
+        }
+        if (equation === '' && value === '-') {
+          // Allow starting with minus for negative numbers
+          equation = '-';
+          return;
+        }
+        if (isOperator(equation.slice(-1))) {
+          // Replace last operator with new one
+          equation = equation.slice(0, -1) + value;
+          return;
+        }
+      }
+      equation += value;
+    }
+  }
+
+  function clearAll() {
+    equation = '';
+    updateEquationDisplay();
+    updateResultDisplay('0');
+    resultShown = false;
+  }
+
+  function calculate() {
+    if(equation === '') return;
+    // Prevent ending with operator
+    if(isOperator(equation.slice(-1))) {
+      equation = equation.slice(0, -1);
+    }
+    try {
+      // Use Function constructor to safely evaluate expression
+      const safeEquation = equation.replace(/[^-()\d/*+.]/g, '');
+      const evalResult = Function('"use strict";return (' + safeEquation + ')')();
+      const roundedResult = Math.round((evalResult + Number.EPSILON) * 100000000) / 100000000;
+      updateResultDisplay(roundedResult);
+      equation = String(roundedResult);
+      resultShown = true;
+      updateEquationDisplay();
+    } catch {
+      updateResultDisplay('Error');
+      equation = '';
+      resultShown = true;
+      updateEquationDisplay();
+    }
+  }
+
+  buttons.forEach(button => {
+    button.addEventListener('click', () => {
+      const value = button.getAttribute('data-value');
+      appendValue(value);
+      updateEquationDisplay();
+    });
+  });
+
+  clearButton.addEventListener('click', clearAll);
+  equalsButton.addEventListener('click', calculate);
+
+  // Initialize display
+  updateEquationDisplay();
+  updateResultDisplay('0');
+})();
+</script>
+</body>
+</html>
